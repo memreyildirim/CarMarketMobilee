@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">CarMarketMobilee</string>
+    <string name="login_title">Giriş Yap</string>
+    <string name="login_email_label">E-posta</string>
+    <string name="login_email_placeholder">eposta@ornek.com</string>
+    <string name="login_password_label">Şifre</string>
+    <string name="login_password_placeholder">Şifrenizi girin</string>
+    <string name="login_button">Giriş</string>
+    <string name="register_button">Register</string>
+</resources>
