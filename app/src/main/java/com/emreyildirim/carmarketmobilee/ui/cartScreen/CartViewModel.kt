@@ -8,6 +8,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.emreyildirim.carmarketmobilee.data.RetrofitInstance
 import com.emreyildirim.carmarketmobilee.model.CartDto
+import com.emreyildirim.carmarketmobilee.model.CartItemDto
+import com.emreyildirim.carmarketmobilee.model.CartItemRequest
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 
@@ -90,6 +92,52 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 Log.e("CartViewModel", "Error clearing cart: ${e.message}", e)
                 _error.value = e.message ?: "Unknown error"
             }finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun decreaseQuantity(item: CartItemDto){
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _error.value = null
+                val context = getApplication<Application>().applicationContext
+                val cartService = RetrofitInstance.getCartService(context)
+
+                val newQuantity = (item.quantity - 1).coerceAtLeast(0)
+                if (newQuantity == 0){
+                    cartService.deleteFromCart(item.carId)
+                }else{
+                    cartService.updateQuantity(item.carId, newQuantity)
+                }
+
+                val updated = cartService.updateQuantity(item.carId, newQuantity)
+                _cart.value = updated
+            }catch (e: Exception){
+                _error.value = e.message ?: "Unknown error"
+            }finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun increaseQuantity(item : CartItemDto){
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _error.value = null
+                val context = getApplication<Application>().applicationContext
+                val cartService = RetrofitInstance.getCartService(context)
+
+
+
+                val updated = cartService.updateQuantity(item.carId, item.quantity + 1)
+                _cart.value = updated
+            }catch (e: Exception){
+                _error.value = e.message ?: "Unknown error"
+            }
+            finally {
                 _isLoading.value = false
             }
         }

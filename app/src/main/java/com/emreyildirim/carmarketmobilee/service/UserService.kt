@@ -1,6 +1,6 @@
 package com.emreyildirim.carmarketmobilee.service
 
-import com.emreyildirim.carmarketmobilee.ui.homeScreen.UserProfile
+import com.emreyildirim.carmarketmobilee.model.UserProfile
 import retrofit2.http.GET
 
 interface UserService {

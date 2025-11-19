@@ -1,10 +1,13 @@
 package com.emreyildirim.carmarketmobilee.data
 
 import android.content.Context
+import com.emreyildirim.carmarketmobilee.service.AdminService
 import com.emreyildirim.carmarketmobilee.service.AuthService
+import com.emreyildirim.carmarketmobilee.service.BrandService
 import com.emreyildirim.carmarketmobilee.service.CarService
 import com.emreyildirim.carmarketmobilee.service.CartService
 import com.emreyildirim.carmarketmobilee.service.UserService
+import com.emreyildirim.carmarketmobilee.service.FavoriteService
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -85,5 +88,35 @@ object RetrofitInstance {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(CartService::class.java)
+    }
+
+    fun getBrandService(context: Context): BrandService {
+        val client = createAuthorizedClient(context)
+        return Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(BrandService::class.java)
+    }
+
+    fun getFavoriteService(context: Context): FavoriteService {
+        val client = createAuthorizedClient(context)
+        return Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(FavoriteService::class.java)
+    }
+
+    fun getAdminService(context: Context): AdminService {
+        val client = createAuthorizedClient(context)
+        return Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(AdminService::class.java)
     }
 }

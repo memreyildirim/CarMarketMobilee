@@ -24,14 +24,15 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import com.emreyildirim.carmarketmobilee.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     onLoginClick: (email: String, password: String) -> Unit,
-    onRegisterClicked: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navController: NavHostController
 ) {
     val (email, setEmail) = remember { mutableStateOf("") }
     val (password, setPassword) = remember { mutableStateOf("") }
@@ -85,8 +86,9 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        //register button
         Button(
-            onClick = onRegisterClicked,
+            onClick = {navController.navigate("register")},
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(text = stringResource(id = R.string.register_button))

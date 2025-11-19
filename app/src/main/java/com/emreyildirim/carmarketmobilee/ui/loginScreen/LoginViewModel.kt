@@ -13,10 +13,10 @@ class LoginViewModel : ViewModel() {
     private val _loginResult = MutableLiveData<Result<String>>()
     val loginResult: LiveData<Result<String>> = _loginResult
 
-    fun login(username: String , password: String) {
+    fun login(email: String , password: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitInstance.authService.login(LoginRequest(username, password))
+                val response = RetrofitInstance.authService.login(LoginRequest(email, password))
                 _loginResult.postValue(Result.success(response.token))
             } catch (e : Exception) {
                 _loginResult.postValue(Result.failure(e))

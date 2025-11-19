@@ -1,6 +1,9 @@
 package com.emreyildirim.carmarketmobilee.ui.components
 
+import android.content.Context
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -12,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
@@ -22,13 +26,36 @@ import com.emreyildirim.carmarketmobilee.data.BottomNavItem
 
 @Composable
 fun AppBottomBar(navController: NavHostController) {
-    // Şimdilik sadece "home" var. İleride yeni rotalar ekleyebilirsin.
-    val items = listOf(
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+    val role = prefs.getStringSet("role", emptySet()) ?: emptySet()
+    val isUser = role.contains("USER")
+    val isAdmin = role.contains("ADMIN")
+    
+    // Kullanıcı rolüne göre menü öğelerini filtrele
+    val allItems = listOf(
          BottomNavItem(route = "home", Icons.Default.Home, label = "Home"),
-        BottomNavItem(route = "cart", Icons.Default.ShoppingCart, label = "Cart"),
-         BottomNavItem(route = "profile", Icons.Default.Person, label = "Profile"),
-        BottomNavItem(route = "favorites", Icons.Default.Favorite, label = "Favorites")
+         BottomNavItem(route = "cart", Icons.Default.ShoppingCart, label = "Cart"),
+         BottomNavItem(route = "add", icon = Icons.Default.Add, label = "Add Car"),
+         BottomNavItem(route = "favorites", Icons.Default.Favorite, label = "Favorites"),
+         BottomNavItem(route = "panel", Icons.Default.AdminPanelSettings, label = "Panel"),
+         BottomNavItem(route = "profile", Icons.Default.Person, label = "Profile")
+
     )
+    
+    // Eğer kullanıcı rolü USER ise cart menüsünü göster, değilse gizle
+    val items = allItems.filter { item ->
+        when(item.route){
+            "home" -> isUser || isAdmin
+            "add" -> isAdmin
+            "panel" ->  isAdmin
+            "cart" -> isUser
+            "favorites" -> isUser
+            "profile" -> isUser || isAdmin
+
+            else -> true
+        }
+    }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination

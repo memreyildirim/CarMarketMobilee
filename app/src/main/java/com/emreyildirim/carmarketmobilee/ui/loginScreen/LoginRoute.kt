@@ -16,11 +16,10 @@ fun LoginRoute(navController: NavHostController) {
     val loginResult by viewModel.loginResult.observeAsState()
     val context = LocalContext.current
 
-    LoginScreen(
+    LoginScreen(navController = navController,
         onLoginClick = { email, password ->
             viewModel.login(email, password)
-        },
-        onRegisterClicked = {navController.navigate("register")}
+        }
     )
 
     loginResult?.onSuccess { token ->

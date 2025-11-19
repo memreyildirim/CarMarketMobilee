@@ -1,6 +1,10 @@
 package com.emreyildirim.carmarketmobilee
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.rememberNavController
 import com.emreyildirim.carmarketmobilee.navigation.NavGraph
@@ -15,14 +19,15 @@ fun CarMarketMobileeApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val route = backStackEntry?.destination?.route
 
-    // Login ve detail sayfalarında bottom bar'ı gizle
+    // Login, register ve detail sayfalarında bottom bar'ı gizle
     val showBottomBar = when {
-        route == "login" -> false
+        route == "login" || route == "register" || route == "update" -> false
         route?.startsWith("detail/") == true -> false
         else -> true
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom),
         bottomBar = {
             if (showBottomBar) {
                 AppBottomBar(navController = navController)

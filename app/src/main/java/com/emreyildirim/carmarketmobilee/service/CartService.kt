@@ -6,6 +6,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface CartService {
@@ -20,4 +21,7 @@ interface CartService {
 
     @DELETE("api/v1/cart")
     suspend fun clearCart()
+
+    @PUT("api/v1/cart/items/{carId}")
+    suspend fun updateQuantity(@Path("carId") carId : Long, @retrofit2.http.Query("quantity") quantity: Int) : CartDto
 }
