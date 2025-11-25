@@ -3,12 +3,14 @@ package com.emreyildirim.carmarketmobilee.ui.addCarScreen
 import android.app.Application
 import android.content.Context
 import android.net.Uri
-import androidx.compose.runtime.mutableStateOf
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.emreyildirim.carmarketmobilee.data.RetrofitInstance
 import com.emreyildirim.carmarketmobilee.model.Brand
+import com.emreyildirim.carmarketmobilee.model.RegisterRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,16 +23,15 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Date
-import okhttp3.RequestBody
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class AddCarViewModel(application: Application) : AndroidViewModel(application) {
     
     private val _uiState = MutableStateFlow(AddCarUiState())
     val uiState: StateFlow<AddCarUiState> = _uiState.asStateFlow()
+
+    private val _addBrandResult = MutableLiveData<Result<String>>()
+    val addBrandResult: LiveData<Result<String>> = _addBrandResult
 
 
     
@@ -134,6 +135,33 @@ class AddCarViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    fun addBrand(brandName: String){
+        viewModelScope.launch {
+            try {
+                val context = getApplication<Application>().applicationContext
+                val brandService = RetrofitInstance.getBrandService(context)
+                // Backend Brand objesi bekliyor, id'yi 0 yapıyoruz (yeni brand için)
+                val brand = Brand(id = null , brandName = brandName)
+                val addBrandResponse = brandService.addBrand(brand)
+
+                if (addBrandResponse.isSuccessful){
+                    _addBrandResult.postValue(Result.success("Brand added succesfully"))
+                    Log.d("AddCarViewModel", "Brand added succesfully")
+                    loadBrands(context)
+                }else{
+                    val errorMessage = addBrandResponse.errorBody()?.string() ?: "Failed to add brand"
+                    _addBrandResult.postValue(Result.failure(Exception(errorMessage)))
+                    Log.e("AddCarViewModel", "Failed to add brand: $errorMessage")
+                }
+
+
+            }catch (e: Exception){
+                _addBrandResult.postValue(Result.failure(e))
+                Log.e("AddCarViewModel", "Error adding brand: ${e.message}", e)
+            }
+        }
+    }
     
     private fun validateForm(): Boolean {
         val state = _uiState.value
@@ -159,13 +187,7 @@ class AddCarViewModel(application: Application) : AndroidViewModel(application) 
         return true
     }
     
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
-    }
-    
-    fun resetSuccess() {
-        _uiState.value = _uiState.value.copy(isSuccess = false)
-    }
+
 }
 
 data class AddCarUiState(

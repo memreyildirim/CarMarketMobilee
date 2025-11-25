@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CarCrash
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +27,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -46,7 +48,9 @@ fun AddCar(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    
+
+    var showAddBrandDialog by remember { mutableStateOf(false) }
+
     // Load brands on startup
     LaunchedEffect(Unit) {
         viewModel.loadBrands(context)
@@ -55,6 +59,16 @@ fun AddCar(
     // Handle success navigation
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
+            try {
+                // Try to set flag on home screen if it exists in back stack
+                navController.getBackStackEntry("home")
+                    .savedStateHandle
+                    .set("car_added", true)
+            } catch (e: Exception) {
+                // Home screen is not in back stack, will be handled when navigating
+            }
+            // Navigate back - if home is in back stack, it will receive the flag
+            // If not, we'll set it when home screen is created
             navController.popBackStack()
         }
     }
@@ -131,37 +145,70 @@ fun AddCar(
             println("DEBUG: Selected brand = ${selectedBrand?.brandName}")
         }
         
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(
-                value = selectedBrand?.brandName ?: "Select Brand",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Brand") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-            
-            ExposedDropdownMenu(
+            ExposedDropdownMenuBox(
                 expanded = expanded,
-                onDismissRequest = { expanded = false }
+                onExpandedChange = { expanded = it },
+                modifier = Modifier.weight(1f)
             ) {
-                uiState.brands.forEach { brand ->
-                    DropdownMenuItem(
-                        text = { Text(brand.brandName) },
-                        onClick = {
-                            println("DEBUG: Brand clicked: ${brand.brandName} (ID: ${brand.id})")
-                            viewModel.updateForm("brandId", brand.id)
-                            expanded = false
-                        }
-                    )
+                OutlinedTextField(
+                    value = selectedBrand?.brandName ?: "Select Brand",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Brand") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    uiState.brands.forEach { brand ->
+                        DropdownMenuItem(
+                            text = { Text(brand.brandName) },
+                            onClick = {
+                                println("DEBUG: Brand clicked: ${brand.brandName} (ID: ${brand.id})")
+                                viewModel.updateForm("brandId", brand.id!!)
+                                expanded = false
+                            }
+                        )
+                    }
                 }
+            }
+            IconButton(onClick = {showAddBrandDialog = true}) {
+                Icon(Icons.Default.CarCrash, contentDescription = "Add brand")
+            }
+            if (showAddBrandDialog){
+                var brandName by remember { mutableStateOf("") }
+
+                AlertDialog(
+                    onDismissRequest = { showAddBrandDialog = false },
+                    title = { Text("Yeni Admin Ekle") },
+                    text = {
+                        Column {
+
+                            OutlinedTextField(value = brandName, onValueChange = { brandName = it }, label = { Text("BrandName") })
+                        }
+                    },
+                    confirmButton = {
+                        Button(onClick = {
+                            // Backend’e istek at
+                            viewModel.addBrand(brandName)
+                            showAddBrandDialog = false
+                        }) { Text("Ekle") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showAddBrandDialog = false }) { Text("İptal") }
+                    }
+                )
             }
         }
         

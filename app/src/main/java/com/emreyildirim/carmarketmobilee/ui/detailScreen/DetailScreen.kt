@@ -2,7 +2,6 @@ package com.emreyildirim.carmarketmobilee.ui.detailScreen
 
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,17 +18,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Photo
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -45,17 +41,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
-import com.emreyildirim.carmarketmobilee.R
 import com.emreyildirim.carmarketmobilee.data.RetrofitInstance
 import com.emreyildirim.carmarketmobilee.ui.theme.deleteButton
 import com.emreyildirim.carmarketmobilee.ui.theme.updateButton
@@ -83,6 +76,7 @@ fun DetailScreen(carId: Long, viewModel: DetailViewModel = viewModel(),navContro
     LaunchedEffect(carId) {
         viewModel.loadCarDetail(carId)
         viewModel.loadIsFavorite(carId)
+
     }
 
     LaunchedEffect(addToCartResult) {
@@ -95,6 +89,16 @@ fun DetailScreen(carId: Long, viewModel: DetailViewModel = viewModel(),navContro
 
     LaunchedEffect(deleteResult) {
         deleteResult?.onSuccess {
+            try {
+                // Try to set flag on home screen if it exists in back stack
+                navController.getBackStackEntry("home")
+                    .savedStateHandle
+                    .set("car_added", true)
+            } catch (e: Exception) {
+                // Home screen is not in back stack, will be handled when navigating
+            }
+            // Navigate back - if home is in back stack, it will receive the flag
+            // If not, we'll set it when home screen is created
             navController.popBackStack()
         }?.onFailure {
             Toast.makeText(context,"Deleting failure: ${it.message}",Toast.LENGTH_SHORT).show()

@@ -153,7 +153,7 @@ fun CarUpdateScreen(
                             text = { Text(brand.brandName) },
                             onClick = {
                                 println("DEBUG: Brand clicked: ${brand.brandName} (ID: ${brand.id})")
-                                viewModel.updateForm("brandId", brand.id)
+                                viewModel.updateForm("brandId", brand.id!!)
                                 expanded = false
                             }
                         )

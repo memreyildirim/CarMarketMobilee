@@ -2,6 +2,7 @@ package com.emreyildirim.carmarketmobilee.service
 
 import com.emreyildirim.carmarketmobilee.model.CarDetailDto
 import com.emreyildirim.carmarketmobilee.model.CarDto
+import com.emreyildirim.carmarketmobilee.model.PageResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -13,6 +14,14 @@ import java.time.LocalDateTime
 interface CarService {
     @GET("api/v1/cars")
     suspend fun getCars(): List<CarDto>
+
+    @GET("api/v1/cars/filter")
+    suspend fun getPagedCars(
+        @Query("page") page: Int,
+        @Query("size") size: Int,
+        @Query("sortBy") sortBy: String = "model",
+        @Query("asc") asc: Boolean = true
+    ): PageResponse<CarDto>
 
     @GET("api/v1/cars/{id}")
     suspend fun getCarById(@Path("id") id: Long): CarDetailDto

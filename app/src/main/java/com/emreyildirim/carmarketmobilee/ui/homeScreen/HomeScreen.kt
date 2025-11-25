@@ -31,6 +31,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.navigation.compose.currentBackStackEntryAsState
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAbsoluteAlignment
 import androidx.compose.ui.Modifier
@@ -46,15 +48,46 @@ import androidx.core.content.edit
 import coil3.compose.AsyncImage
 import com.emreyildirim.carmarketmobilee.R
 import com.emreyildirim.carmarketmobilee.data.RetrofitInstance
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
+import androidx.paging.compose.itemKey
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel(), navController: NavHostController)  {
-    val cars by viewModel.cars.observeAsState(emptyList())
+    val carPagingItems = viewModel.carPagingFlow.collectAsLazyPagingItems()
     val context = LocalContext.current
+    
+    // Listen for car_added flag from savedStateHandle
+    val savedStateHandle = navController.currentBackStackEntry!!.savedStateHandle
+    val newCarAdded by savedStateHandle
+        .getLiveData<Boolean>("car_added")
+        .observeAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadCars()
+    // Track navigation to detect when we return to home screen
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+
+    // Refresh when car is added or deleted (via flag)
+    LaunchedEffect(newCarAdded) {
+        if (newCarAdded == true) {
+            viewModel.refresh()
+            // Clear the flag after refresh
+            savedStateHandle.remove<Boolean>("car_added")
+        }
+    }
+    
+    // Also check flag when navigating back to home screen
+    LaunchedEffect(currentRoute) {
+        if (currentRoute == "home") {
+            // Small delay to ensure navigation is complete
+            kotlinx.coroutines.delay(50)
+            val flagValue = savedStateHandle.get<Boolean>("car_added") ?: false
+            if (flagValue) {
+                viewModel.refresh()
+                savedStateHandle.remove<Boolean>("car_added")
+            }
+        }
     }
 
     Scaffold(topBar = {
@@ -66,41 +99,49 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel(), navController: NavHostCon
         })
     { innerPadding ->
         LazyColumn(contentPadding = innerPadding) {
-            items(cars) { car ->
-                Card(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-                    .clickable{
-                        Toast.makeText(context, "Card Clicked", Toast.LENGTH_SHORT).show()
-                        // detail ekranına yönlendirme
-                        navController.navigate("detail/${car.carId}")
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
+            items(
+                count = carPagingItems.itemCount,
+                key = carPagingItems.itemKey { it.carId },
+                contentType = carPagingItems.itemContentType { "Cars" }
+            ) { index ->
+                val car = carPagingItems[index]
+
+                if (car != null) {
+                    Card(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .clickable {
+                            Toast.makeText(context, "Card Clicked", Toast.LENGTH_SHORT).show()
+                            // detail ekranına yönlendirme
+                            navController.navigate("detail/${car.carId}")
+                        }
                     ) {
-                        AsyncImage(
-                            model = RetrofitInstance.buildAbsoluteUrl(car.filePath),
-                            contentDescription = "CarPhoto",
-                            modifier = Modifier
-                                .size(80.dp)
-                                .padding(8.dp),
-                            error = rememberVectorPainter(Icons.Outlined.Photo),
-                            fallback = rememberVectorPainter(Icons.Outlined.Photo)
-                        )
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                "${car.brandName} ${car.model}",
-                                style = MaterialTheme.typography.titleMedium
+                            AsyncImage(
+                                model = RetrofitInstance.buildAbsoluteUrl(car.filePath),
+                                contentDescription = "CarPhoto",
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .padding(8.dp),
+                                error = rememberVectorPainter(Icons.Outlined.Photo),
+                                fallback = rememberVectorPainter(Icons.Outlined.Photo)
                             )
-                            Text("Price: ${car.price} ₺")
-                            Text(if (car.isNew) "New" else "Second Hand")
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                            ) {
+                                Text(
+                                    "${car.brandName} ${car.model}",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text("Price: ${car.price} ₺")
+                                Text(if (car.isNew) "New" else "Second Hand")
+                            }
                         }
                     }
                 }

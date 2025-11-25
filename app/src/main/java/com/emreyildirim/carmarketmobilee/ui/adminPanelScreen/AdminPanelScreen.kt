@@ -1,5 +1,6 @@
 package com.emreyildirim.carmarketmobilee.ui.adminPanelScreen
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,8 +17,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddModerator
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,17 +31,25 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -51,10 +62,25 @@ import com.emreyildirim.carmarketmobilee.model.CartItemDto
 @Composable
 fun AdminPanelScreen(
     navController: NavHostController,
-    viewModel: AdminPanelViewModel = viewModel()
+    viewModel: AdminPanelViewModel = viewModel(),
+
 ) {
 
+    val context = LocalContext.current
+
+    var showAddAdminDialog by remember { mutableStateOf(false) }
+
     val uiState by viewModel.uiState.collectAsState()
+
+    val addAdminResult by viewModel.addAdminResult.observeAsState()
+
+    addAdminResult?.onFailure {
+        showAddAdminDialog = false
+        Toast.makeText(context, "Admin add failed: ${it.message}", Toast.LENGTH_SHORT).show()
+
+    }
+
+
 
     LaunchedEffect(Unit) {
         viewModel.refreshUsers()
@@ -67,6 +93,37 @@ fun AdminPanelScreen(
                 actions = {
                     IconButton(onClick = { viewModel.refreshUsers() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Yenile")
+                    }
+                    IconButton(onClick = {showAddAdminDialog = true} ) {
+                        Icon(Icons.Default.AddModerator, contentDescription = "Add Admin")
+                    }
+                    if (showAddAdminDialog) {
+
+                        var username by remember { mutableStateOf("") }
+                        var email by remember { mutableStateOf("") }
+                        var password by remember { mutableStateOf("") }
+
+                        AlertDialog(
+                            onDismissRequest = { showAddAdminDialog = false },
+                            title = { Text("Yeni Admin Ekle") },
+                            text = {
+                                Column {
+                                    OutlinedTextField(value = username, onValueChange = { username = it }, label = { Text("Username") })
+                                    OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
+                                    OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation())
+                                }
+                            },
+                            confirmButton = {
+                                Button(onClick = {
+                                    // Backend’e istek at
+                                    viewModel.addAdmin(username,email, password)
+                                    showAddAdminDialog = false
+                                }) { Text("Ekle") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showAddAdminDialog = false }) { Text("İptal") }
+                            }
+                        )
                     }
                 }
             )
@@ -138,8 +195,10 @@ fun AdminPanelScreen(
                     )
 
                     DetailsColumn(
-                        uiState = uiState,
-                        modifier = Modifier.weight(0.6f)                   )
+                            uiState = uiState,
+                            modifier = Modifier.weight(0.6f)
+                    )
+
                 }
             }
         }
@@ -254,90 +313,95 @@ private fun DetailsColumn(
 
         Spacer(modifier = Modifier.size(12.dp))
 
-        Text(
-            text = "Sepet",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
 
-        val cart = uiState.cart
-        if (cart == null) {
-            val message = if (uiState.isLoadingDetails) {
-                "Sepet yükleniyor..."
+
+        if (uiState.selectedUser.role == "USER"){
+
+            Text(
+                text = "Sepet",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            val cart = uiState.cart
+            if (cart == null) {
+                val message = if (uiState.isLoadingDetails) {
+                    "Sepet yükleniyor..."
+                } else {
+                    "Sepet bilgisi bulunamadı"
+                }
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            } else if (cart.items.isEmpty()) {
+                Text(
+                    text = "Sepet boş",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             } else {
-                "Sepet bilgisi bulunamadı"
+                cart.items.forEach { item ->
+                    CartItemCard(item)
+                }
+                Text(
+                    text = "Toplam: %.2f ₺".format(cart.totalPrice),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        } else if (cart.items.isEmpty()) {
-            Text(
-                text = "Sepet boş",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        } else {
-            cart.items.forEach { item ->
-                CartItemCard(item)
-            }
-            Text(
-                text = "Toplam: %.2f ₺".format(cart.totalPrice),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
 
-        Divider(modifier = Modifier.padding(vertical = 12.dp))
+            Divider(modifier = Modifier.padding(vertical = 12.dp))
 
-        Text(
-            text = "Favoriler",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        if (uiState.favorites.isEmpty()) {
             Text(
-                text = if (uiState.isLoadingDetails) "Favoriler yükleniyor..." else "Favori araç bulunamadı",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 8.dp)
+                text = "Favoriler",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
             )
-        } else {
-            uiState.favorites.forEach { car ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
+
+            if (uiState.favorites.isEmpty()) {
+                Text(
+                    text = if (uiState.isLoadingDetails) "Favoriler yükleniyor..." else "Favori araç bulunamadı",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            } else {
+                uiState.favorites.forEach { car ->
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 6.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        AsyncImage(
-                            model = RetrofitInstance.buildAbsoluteUrl(car.filePath),
-                            contentDescription = "Araç fotoğrafı",
+                        Row(
                             modifier = Modifier
-                                .size(72.dp)
-                                .padding(end = 12.dp)
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "${car.brandName} ${car.model}",
-                                style = MaterialTheme.typography.titleMedium
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage(
+                                model = RetrofitInstance.buildAbsoluteUrl(car.filePath),
+                                contentDescription = "Araç fotoğrafı",
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .padding(end = 12.dp)
                             )
-                            Text(
-                                text = "${car.price} ₺",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                text = if (car.isNew) "Sıfır" else "İkinci El",
-                                style = MaterialTheme.typography.labelMedium
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "${car.brandName} ${car.model}",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = "${car.price} ₺",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = if (car.isNew) "Sıfır" else "İkinci El",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                     }
                 }

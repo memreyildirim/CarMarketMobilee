@@ -2,12 +2,16 @@ package com.emreyildirim.carmarketmobilee.ui.adminPanelScreen
 
 import android.app.Application
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.emreyildirim.carmarketmobilee.data.RetrofitInstance
 import com.emreyildirim.carmarketmobilee.model.AdminUserDto
 import com.emreyildirim.carmarketmobilee.model.CarDto
 import com.emreyildirim.carmarketmobilee.model.CartDto
+import com.emreyildirim.carmarketmobilee.model.RegisterRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +22,10 @@ class AdminPanelViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _uiState = MutableStateFlow(AdminPanelUiState())
     val uiState: StateFlow<AdminPanelUiState> = _uiState.asStateFlow()
+
+    private val _addAdminResult = MutableLiveData<Result<String>>()
+    val addAdminResult: LiveData<Result<String>> = _addAdminResult
+
 
     fun refreshUsers() {
         viewModelScope.launch {
@@ -123,6 +131,30 @@ class AdminPanelViewModel(application: Application) : AndroidViewModel(applicati
                     it.copy(errorMessage = e.message ?: "Kullanıcı silinemedi") 
                 }
 
+            }
+        }
+    }
+
+    fun addAdmin(username: String,password: String, email: String) {
+
+        viewModelScope.launch {
+            try {
+                val context = getApplication<Application>().applicationContext
+                val adminService = RetrofitInstance.getAdminService(context)
+                val addAdminResponse = adminService.addAdmin(RegisterRequest(username,password,email))
+
+                if (addAdminResponse.isSuccessful){
+                    _addAdminResult.postValue(Result.success("Admin added succesfully"))
+                    Log.d("AdminPanelViewModel", "Admin added succesfully")
+                    refreshUsers()
+                    Toast.makeText(context, "Admin added succesfully", Toast.LENGTH_SHORT).show()
+                }else{
+                    _addAdminResult.postValue(Result.failure(Exception("Failed to add admin")))
+                    Log.e("AdminPanelViewModel", "Failed to add admin")
+                }
+
+            }catch (e: Exception){
+                println("DEBUG: Error: ${e.message}")
             }
         }
     }

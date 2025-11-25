@@ -7,25 +7,37 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.emreyildirim.carmarketmobilee.data.RetrofitInstance
-import com.emreyildirim.carmarketmobilee.model.CarDto
-import kotlinx.coroutines.launch
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.emreyildirim.carmarketmobilee.data.CarPagingSource
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _cars = MutableLiveData<List<CarDto>>()
-    val cars: LiveData<List<CarDto>> = _cars
-    fun loadCars() {
-        viewModelScope.launch {
-            try {
+    // Refresh trigger - her değiştiğinde yeni Pager oluşturulur
+    private val refreshTrigger = MutableStateFlow(0)
+
+    val carPagingFlow = refreshTrigger.flatMapLatest {
+        Pager(
+            config = PagingConfig(pageSize = 10,
+                initialLoadSize =  10,
+                prefetchDistance = 2),
+            pagingSourceFactory = {
                 val context = getApplication<Application>().applicationContext
-                val carService = RetrofitInstance.getCarService(context)
-                val response = carService.getCars()
-                _cars.postValue(response)
-            }catch (e: Exception){
-                Log.e("HomeViewModel", "Arabalar yüklenmedi", e)
+                val service = RetrofitInstance.getCarService(context)
+                CarPagingSource(service)
             }
-        }
+        ).flow
+    }.cachedIn(viewModelScope)
+
+    fun refresh() {
+        refreshTrigger.value += 1
     }
+}
 
     /*
     private val _profile = MutableLiveData<UserProfile?>()
@@ -43,4 +55,3 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
      */
-}
